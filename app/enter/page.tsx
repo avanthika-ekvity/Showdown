@@ -24,7 +24,7 @@ export default function Enter() {
     localStorage.setItem(TEAM_KEY, team.id); buzz(80); setWelcome(true);
   }
 
-  if (welcome && team) return <Onboarding team={team} members={d.members.filter((m) => m.team_id === team.id)} onDone={() => router.replace("/team")} />;
+  if (welcome && team) return <Onboarding team={team} onDone={() => router.replace("/team")} />;
 
   return (
     <main className="mx-auto grid min-h-dvh max-w-md content-center gap-6 px-5 py-10">
