@@ -152,7 +152,7 @@ function Admin({ staff }: { staff: Staff }) {
                                 disabled={g.tg?.status === "locked"}
                                 onClick={() =>
                                   confirm(`⚡ ${g.name} — team beat the clock!\n\nThis will:\n✅ Mark complete (+${g.points_awarded} steps)\n🎴 Grant 2 card picks\n\nConfirm?`) &&
-                                  act("complete_game", { p_team_id: t.id, p_game_id: g.id },
+                                  act("complete_game", { p_team_id: t.id, p_game_id: g.id, p_by: "beat_clock" },
                                     `🎉 +${g.points_awarded} steps & 🎴 2 card picks unlocked!`,
                                     () => { burst(t.color_hex, true); play("win"); })}
                                 className={`${btn} bg-yellow-400 text-black text-xs px-2 py-1`}>
@@ -162,7 +162,7 @@ function Admin({ staff }: { staff: Staff }) {
                                 disabled={g.tg?.status === "locked"}
                                 onClick={() =>
                                   confirm(`Mark ${g.name} done for ${t.name}?\n\nThey did NOT beat the clock — no card picks.`) &&
-                                  act("complete_game", { p_team_id: t.id, p_game_id: g.id },
+                                  act("complete_game", { p_team_id: t.id, p_game_id: g.id, p_by: "admin" },
                                     `🎉 +${g.points_awarded} steps (no card picks)`,
                                     () => { burst(t.color_hex); play("win"); })}
                                 className={`${btn} bg-green-500/70 text-black text-xs px-2 py-1`}>

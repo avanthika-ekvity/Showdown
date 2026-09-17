@@ -73,11 +73,12 @@ export const TEAM_CONFIG = {
 export type TeamId = keyof typeof TEAM_CONFIG;
 export const TEAMS = Object.values(TEAM_CONFIG);
 
-// Card chances awarded per game when team beats the clock
+// 2 picks per game session, max 2 cards open per session
+export const MAX_CARD_OPENS = 4; // total across both games
+export const SESSION_LIMIT = 2;  // per game sitting
+
+// Card chances awarded when beat_clock is used
 export const CARD_CHANCES_PER_GAME: Record<string, number> = {
   mirchi: 2,
   jal: 2,
 };
-
-// Max cards a team can open total across all games
-export const MAX_CARD_OPENS = 4;
