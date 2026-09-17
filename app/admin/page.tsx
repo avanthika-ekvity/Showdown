@@ -116,49 +116,67 @@ function Admin({ staff }: { staff: Staff }) {
             const elig = d.settings?.power_eligibility_seconds ?? 180;
             return (
               <details key={t.id} className="arena team-glow p-3" style={{ ["--c" as string]: t.color_hex }} open={!isMaster}>
-                <summary className="display cursor-pointer text-2xl">{t.emoji} {t.name.replace("TEAM ", "")} · {t.score} steps</summary>
+                <summary className="display cursor-pointer text-2xl">
+                  {t.emoji} {t.name.replace("TEAM ", "")} · {t.score} steps
+                </summary>
+
                 <ul className="mt-2 grid gap-2">
                   {games.map((g, i) => (
                     <li key={g.id} className="flex items-center gap-2 rounded-xl bg-white/5 p-2 text-xs">
                       <span className="text-xl">{g.emoji}</span>
                       <span className="flex-1 min-w-0">
                         <span className="display block text-base truncate">{i + 1}. {g.name}</span>
-                        <span className="text-[var(--muted)]">{g.tg?.status.toUpperCase()} · +{g.points_awarded}{g.time_limit_seconds ? ` · ⏱${g.time_limit_seconds}s` : ""}</span>
+                        <span className="text-[var(--muted)]">
+                          {g.tg?.status.toUpperCase()} · +{g.points_awarded}
+                          {g.time_limit_seconds ? ` · ⏱${g.time_limit_seconds}s` : ""}
+                        </span>
                       </span>
                       {g.tg?.status === "completed" ? (
                         <span>✅</span>
                       ) : (
                         <div className="flex gap-1 shrink-0 flex-wrap justify-end">
-                          {/* Timer button — always show for timed games */}
+                          {/* Timer start button */}
                           {g.time_limit_seconds && (
                             <button
-                              onClick={() => act("timer_start", { p_team_id: t.id, p_game_id: g.id, p_type: "game", p_seconds: g.time_limit_seconds }, `⏱ Timer started`)}
+                              onClick={() => act("timer_start", {
+                                p_team_id: t.id, p_game_id: g.id,
+                                p_type: "game", p_seconds: g.time_limit_seconds
+                              }, `⏱ Timer started`)}
                               className={`${btn} bg-white/10 text-xs px-2 py-1`}>⏱
                             </button>
                           )}
-                          {/* Power eligible games: one button that marks done + grants card picks */}
+                          {/* Power eligible: Beat clock (marks done + grants picks) */}
                           {g.power_eligible ? (
                             <>
                               <button
                                 disabled={g.tg?.status === "locked"}
-                                onClick={() => confirm(`⚡ Mark ${g.name} complete AND grant 2 card picks to ${t.name}?\n\nThis means they beat the clock.`) &&
-                                  act("complete_game", { p_team_id: t.id, p_game_id: g.id }, `🎉 +${g.points_awarded} steps & 2 card picks unlocked!`, () => { burst(t.color_hex, true); play("win"); })}
+                                onClick={() =>
+                                  confirm(`⚡ ${g.name} — team beat the clock!\n\nThis will:\n✅ Mark complete (+${g.points_awarded} steps)\n🎴 Grant 2 card picks\n\nConfirm?`) &&
+                                  act("complete_game", { p_team_id: t.id, p_game_id: g.id },
+                                    `🎉 +${g.points_awarded} steps & 🎴 2 card picks unlocked!`,
+                                    () => { burst(t.color_hex, true); play("win"); })}
                                 className={`${btn} bg-yellow-400 text-black text-xs px-2 py-1`}>
                                 ⚡✅ Beat clock
                               </button>
                               <button
                                 disabled={g.tg?.status === "locked"}
-                                onClick={() => confirm(`Mark ${g.name} complete for ${t.name}?\n\nThey did NOT beat the clock — no card picks.`) &&
-                                  act("complete_game", { p_team_id: t.id, p_game_id: g.id }, `🎉 +${g.points_awarded} steps (no card picks)`, () => { burst(t.color_hex); play("win"); })}
-                                className={`${btn} bg-green-500 text-black text-xs px-2 py-1`}>
-                                ✅ Done (no picks)
+                                onClick={() =>
+                                  confirm(`Mark ${g.name} done for ${t.name}?\n\nThey did NOT beat the clock — no card picks.`) &&
+                                  act("complete_game", { p_team_id: t.id, p_game_id: g.id },
+                                    `🎉 +${g.points_awarded} steps (no card picks)`,
+                                    () => { burst(t.color_hex); play("win"); })}
+                                className={`${btn} bg-green-500/70 text-black text-xs px-2 py-1`}>
+                                ✅ No picks
                               </button>
                             </>
                           ) : (
                             <button
                               disabled={g.tg?.status === "locked"}
-                              onClick={() => confirm(`Mark ${g.name} complete for ${t.name}? +${g.points_awarded} steps.`) &&
-                                act("complete_game", { p_team_id: t.id, p_game_id: g.id }, `🎉 +${g.points_awarded}!`, () => { burst(t.color_hex, true); play("win"); })}
+                              onClick={() =>
+                                confirm(`Mark ${g.name} complete for ${t.name}? +${g.points_awarded} steps.`) &&
+                                act("complete_game", { p_team_id: t.id, p_game_id: g.id },
+                                  `🎉 +${g.points_awarded}!`,
+                                  () => { burst(t.color_hex, true); play("win"); })}
                               className={`${btn} bg-green-500 text-black text-xs px-2 py-1`}>✅ Done
                             </button>
                           )}
@@ -168,7 +186,7 @@ function Admin({ staff }: { staff: Staff }) {
                   ))}
                 </ul>
 
-                {/* Active timers */}
+                {/* Active timers — display + controls only */}
                 {timers.map((timer) => (
                   <div key={timer.id} className="mt-2 rounded-2xl bg-white/5 p-3">
                     <Countdown timer={timer} label={timer.timer_type.replace("_", " ").toUpperCase()} />
@@ -179,6 +197,9 @@ function Admin({ staff }: { staff: Staff }) {
                       <button onClick={() => act("timer_action", { p_id: timer.id, p_action: "complete" }, "■ Stopped")} className={`${btn} bg-white/10 text-xs`}>■</button>
                       <button onClick={() => act("timer_action", { p_id: timer.id, p_action: "reset" }, "↺ Reset")} className={`${btn} bg-white/10 text-xs`}>↺</button>
                     </div>
+                    <p className="mt-1 text-center text-xs text-[var(--muted)]">
+                      Use ⚡✅ Beat clock above to mark done + grant picks.
+                    </p>
                   </div>
                 ))}
 
@@ -195,7 +216,9 @@ function Admin({ staff }: { staff: Staff }) {
                       const tgt = sel.value || p.target_team_id;
                       if (!tgt) { setMsg("Pick a target first"); return; }
                       rpc("request_power", { p_team_id: t.id, p_power_id: p.id, p_target_team_id: tgt }).catch(() => {})
-                        .then(() => act("use_power", { p_power_id: p.id }, p.name.includes("STEAL") ? `✂️ Stole 5 steps!` : "❄️ TIME FROZEN!", () => { burst(t.color_hex); play("power"); }));
+                        .then(() => act("use_power", { p_power_id: p.id },
+                          p.name.includes("STEAL") ? `✂️ Stole 5 steps!` : "❄️ TIME FROZEN!",
+                          () => { burst(t.color_hex); play("power"); }));
                     }} className={`${btn} bg-yellow-400 text-black text-xs`}>⚡ Activate</button>
                   </div>
                 ))}
@@ -204,8 +227,14 @@ function Admin({ staff }: { staff: Staff }) {
                 {d.consequences.filter(c => c.team_id === t.id && ["available", "active"].includes(c.status)).map((c) => (
                   <div key={c.id} className="mt-2 flex items-center gap-2 rounded-xl bg-purple-400/10 border border-purple-300/40 p-2 text-xs">
                     <span className="display flex-1 text-base">{c.name} <span className="text-[var(--muted)]">{c.status.toUpperCase()}</span></span>
-                    {c.status === "available" && <button onClick={() => act("set_status", { p_table: "consequences", p_id: c.id, p_status: "active" }, "😈 Consequence ACTIVE")} className={`${btn} bg-purple-400 text-black text-xs`}>😈 Assign</button>}
-                    {c.status === "active" && <button onClick={() => act("set_status", { p_table: "consequences", p_id: c.id, p_status: "completed" }, "✅ Served")} className={`${btn} bg-white/10 text-xs`}>✅ Served</button>}
+                    {c.status === "available" && (
+                      <button onClick={() => act("set_status", { p_table: "consequences", p_id: c.id, p_status: "active" }, "😈 Consequence ACTIVE")}
+                        className={`${btn} bg-purple-400 text-black text-xs`}>😈 Assign</button>
+                    )}
+                    {c.status === "active" && (
+                      <button onClick={() => act("set_status", { p_table: "consequences", p_id: c.id, p_status: "completed" }, "✅ Served")}
+                        className={`${btn} bg-white/10 text-xs`}>✅ Served</button>
+                    )}
                   </div>
                 ))}
 
@@ -227,8 +256,12 @@ function Admin({ staff }: { staff: Staff }) {
                                 const ok = await rpc("check_final_guess", { p_key: staff.key, p_submission_id: s.id });
                                 alert(ok ? "✅ Correct word!" : "❌ Wrong word");
                               }} className={`${btn} bg-white/10 text-xs`}>🔍 Check</button>
-                              <button onClick={() => act("judge_final", { p_submission_id: s.id, p_correct: true }, `🏆 +${d.settings?.final_bonus_points} steps!`, () => { burst(t.color_hex, true); play("win"); })} className={`${btn} bg-green-500 text-black text-xs`}>✅ Correct</button>
-                              <button onClick={() => act("judge_final", { p_submission_id: s.id, p_correct: false }, "❌ Wrong")} className={`${btn} bg-red-500/80 text-xs`}>❌ Wrong</button>
+                              <button onClick={() => act("judge_final", { p_submission_id: s.id, p_correct: true },
+                                `🏆 +${d.settings?.final_bonus_points} steps!`,
+                                () => { burst(t.color_hex, true); play("win"); })}
+                                className={`${btn} bg-green-500 text-black text-xs`}>✅ Correct</button>
+                              <button onClick={() => act("judge_final", { p_submission_id: s.id, p_correct: false }, "❌ Wrong")}
+                                className={`${btn} bg-red-500/80 text-xs`}>❌ Wrong</button>
                             </div>
                           )}
                         </div>
@@ -316,9 +349,7 @@ function Admin({ staff }: { staff: Staff }) {
                   {members.map((m) => (
                     <li key={m.id} className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2">
                       <span className="flex-1 text-sm font-semibold">{m.name}</span>
-                      <select
-                        value={m.role}
-                        aria-label={`${m.name} role`}
+                      <select value={m.role} aria-label={`${m.name} role`}
                         onChange={(e) => update("members", m.id, { role: e.target.value })}
                         className="focusable rounded-lg bg-black/40 px-2 py-1 text-xs">
                         <option value="player">🎮 Player</option>
@@ -348,7 +379,9 @@ function Admin({ staff }: { staff: Staff }) {
             ))}
             <label className="mt-2 grid gap-1 text-xs">
               <span className="text-[var(--muted)]">event_status</span>
-              <select value={d.settings.event_status} onChange={(e) => update("event_settings", 1, { event_status: e.target.value })} className="focusable rounded-lg bg-black/30 px-2 py-1 text-sm">
+              <select value={d.settings.event_status}
+                onChange={(e) => update("event_settings", 1, { event_status: e.target.value })}
+                className="focusable rounded-lg bg-black/30 px-2 py-1 text-sm">
                 {["upcoming", "live", "final", "complete"].map((s) => <option key={s}>{s}</option>)}
               </select>
             </label>
@@ -363,7 +396,9 @@ function Admin({ staff }: { staff: Staff }) {
             <h2 className="display text-2xl">🧨 RESETS</h2>
             <div className="mt-2 flex flex-wrap gap-2">
               {(["score", "progress", "cards", "powers", "consequences", "timers"] as const).map((s) => (
-                <button key={s} onClick={() => confirm(`Reset ${s}?`) && act("reset_event", { p_scope: s }, `↺ ${s} reset`)} className={`${btn} bg-white/10 text-xs`}>↺ {s}</button>
+                <button key={s}
+                  onClick={() => confirm(`Reset ${s}?`) && act("reset_event", { p_scope: s }, `↺ ${s} reset`)}
+                  className={`${btn} bg-white/10 text-xs`}>↺ {s}</button>
               ))}
             </div>
             <ResetAll onConfirm={() => act("reset_event", { p_scope: "all" }, "🧨 Event reset.")} />
@@ -380,13 +415,19 @@ function Admin({ staff }: { staff: Staff }) {
               const t = d.teams.find((x) => x.id === h.team_id);
               return (
                 <li key={h.id} className="flex gap-2 py-2">
-                  <span className="w-10 shrink-0 text-[var(--muted)]">{new Date(h.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  <span className="w-10 shrink-0 text-[var(--muted)]">
+                    {new Date(h.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
                   <span className="flex-1">{t?.emoji} {h.reason}</span>
-                  <b className={h.change_amount < 0 ? "text-[#ff8a80]" : "text-green-300"}>{h.change_amount > 0 ? "+" : ""}{h.change_amount}</b>
+                  <b className={h.change_amount < 0 ? "text-[#ff8a80]" : "text-green-300"}>
+                    {h.change_amount > 0 ? "+" : ""}{h.change_amount}
+                  </b>
                 </li>
               );
             })}
-            {d.score_history.length === 0 && <li className="py-4 text-center text-[var(--muted)]">Nothing yet.</li>}
+            {d.score_history.length === 0 && (
+              <li className="py-4 text-center text-[var(--muted)]">Nothing yet.</li>
+            )}
           </ul>
         </section>
       )}
@@ -410,10 +451,12 @@ function ScoreControl({ team, act }: { team: Showdown["teams"][number]; act: (fn
         {[5, 10].map((n) => <button key={n} onClick={() => go(-n)} className={`${btn} bg-red-500/80 text-xs`}>−{n}</button>)}
       </div>
       <div className="mt-2 flex gap-2">
-        <input type="number" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="±custom" className="focusable w-20 rounded-lg bg-black/30 px-2 py-1 text-sm" />
+        <input type="number" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="±custom"
+          className="focusable w-20 rounded-lg bg-black/30 px-2 py-1 text-sm" />
         <button onClick={() => go(Number(amt))} className={`${btn} bg-white/10 text-xs`}>Apply</button>
       </div>
-      <select value={reason} onChange={(e) => setReason(e.target.value)} className="focusable mt-2 w-full rounded-lg bg-black/30 px-2 py-1 text-xs">
+      <select value={reason} onChange={(e) => setReason(e.target.value)}
+        className="focusable mt-2 w-full rounded-lg bg-black/30 px-2 py-1 text-xs">
         {["Game completion", "Power - Steal", "Penalty", "Volunteer adjustment", "Bonus", "Final Showdown"].map((r) => <option key={r}>{r}</option>)}
       </select>
     </div>
@@ -426,8 +469,11 @@ function ResetAll({ onConfirm }: { onConfirm: () => void }) {
     <div className="mt-3 rounded-2xl border border-red-400/60 bg-red-500/10 p-3">
       <p className="text-xs font-bold">☢️ Reset ENTIRE event. Type RESET to enable.</p>
       <div className="mt-2 flex gap-2">
-        <input value={v} onChange={(e) => setV(e.target.value)} aria-label="Type RESET" className="focusable flex-1 rounded-lg bg-black/30 px-2 py-1 text-sm" />
-        <button disabled={v !== "RESET"} onClick={() => { if (confirm("Last chance. Wipe everything?")) { onConfirm(); setV(""); } }} className={`${btn} bg-red-500 text-xs`}>🧨 Reset</button>
+        <input value={v} onChange={(e) => setV(e.target.value)} aria-label="Type RESET"
+          className="focusable flex-1 rounded-lg bg-black/30 px-2 py-1 text-sm" />
+        <button disabled={v !== "RESET"}
+          onClick={() => { if (confirm("Last chance. Wipe everything?")) { onConfirm(); setV(""); } }}
+          className={`${btn} bg-red-500 text-xs`}>🧨 Reset</button>
       </div>
     </div>
   );
