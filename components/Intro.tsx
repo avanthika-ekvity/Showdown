@@ -6,7 +6,7 @@ const SCENES: [React.ReactNode, number][] = [
   [<Dice key="dice" size={80} />, 1900],
   [<div key="colors" className="flex gap-3 text-5xl sm:text-7xl">{["🔴", "🔵", "🟡", "🟢"].map((e, i) => <span key={e} className="pop" style={{ animationDelay: `${i * 0.15}s` }}>{e}</span>)}</div>, 1400],
   [<Line key="a">4 TEAMS</Line>, 900],
-  [<Line key="b">32 PLAYERS</Line>, 900],
+  [<Line key="b">33 PLAYERS</Line>, 900],
   [<Line key="c">1 BOARD</Line>, 900],
   [<Line key="d">1 WINNER</Line>, 1100],
   [<Title key="t" />, 1600],
