@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Board } from "@/components/Landing";
 import StaffGate, { logoutStaff, type Staff } from "@/components/StaffGate";
 import { ranked, RANK_LABEL, rpc, useShowdown, type Showdown } from "@/lib/db";
-import { CARD_CHANCES_PER_GAME } from "@/lib/config";
 import { burst, play } from "@/lib/fx";
 import Countdown from "@/components/Countdown";
 import { teamGames } from "@/components/Games";
@@ -126,28 +125,50 @@ function Admin({ staff }: { staff: Staff }) {
                         <span className="display block text-base truncate">{i + 1}. {g.name}</span>
                         <span className="text-[var(--muted)]">{g.tg?.status.toUpperCase()} · +{g.points_awarded}{g.time_limit_seconds ? ` · ⏱${g.time_limit_seconds}s` : ""}</span>
                       </span>
-                      {g.tg?.status === "completed" ? <span>✅</span> : (
+                      {g.tg?.status === "completed" ? (
+                        <span>✅</span>
+                      ) : (
                         <div className="flex gap-1 shrink-0 flex-wrap justify-end">
+                          {/* Timer button — always show for timed games */}
                           {g.time_limit_seconds && (
-                            <button onClick={() => act("timer_start", { p_team_id: t.id, p_game_id: g.id, p_type: "game", p_seconds: g.time_limit_seconds }, `⏱ Timer started`)}
-                              className={`${btn} bg-white/10 text-xs px-2 py-1`}>⏱</button>
+                            <button
+                              onClick={() => act("timer_start", { p_team_id: t.id, p_game_id: g.id, p_type: "game", p_seconds: g.time_limit_seconds }, `⏱ Timer started`)}
+                              className={`${btn} bg-white/10 text-xs px-2 py-1`}>⏱
+                            </button>
                           )}
-                          {g.power_eligible && (
-                            <button onClick={() => act("timer_start", { p_team_id: t.id, p_game_id: g.id, p_type: "power_eligibility", p_seconds: elig }, `⚡ Power timer started`)}
-                              className={`${btn} bg-yellow-400/80 text-black text-xs px-2 py-1`}>⚡</button>
+                          {/* Power eligible games: one button that marks done + grants card picks */}
+                          {g.power_eligible ? (
+                            <>
+                              <button
+                                disabled={g.tg?.status === "locked"}
+                                onClick={() => confirm(`⚡ Mark ${g.name} complete AND grant 2 card picks to ${t.name}?\n\nThis means they beat the clock.`) &&
+                                  act("complete_game", { p_team_id: t.id, p_game_id: g.id }, `🎉 +${g.points_awarded} steps & 2 card picks unlocked!`, () => { burst(t.color_hex, true); play("win"); })}
+                                className={`${btn} bg-yellow-400 text-black text-xs px-2 py-1`}>
+                                ⚡✅ Beat clock
+                              </button>
+                              <button
+                                disabled={g.tg?.status === "locked"}
+                                onClick={() => confirm(`Mark ${g.name} complete for ${t.name}?\n\nThey did NOT beat the clock — no card picks.`) &&
+                                  act("complete_game", { p_team_id: t.id, p_game_id: g.id }, `🎉 +${g.points_awarded} steps (no card picks)`, () => { burst(t.color_hex); play("win"); })}
+                                className={`${btn} bg-green-500 text-black text-xs px-2 py-1`}>
+                                ✅ Done (no picks)
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              disabled={g.tg?.status === "locked"}
+                              onClick={() => confirm(`Mark ${g.name} complete for ${t.name}? +${g.points_awarded} steps.`) &&
+                                act("complete_game", { p_team_id: t.id, p_game_id: g.id }, `🎉 +${g.points_awarded}!`, () => { burst(t.color_hex, true); play("win"); })}
+                              className={`${btn} bg-green-500 text-black text-xs px-2 py-1`}>✅ Done
+                            </button>
                           )}
-                          <button
-                            disabled={g.tg?.status === "locked"}
-                            onClick={() => confirm(`Mark ${g.name} complete for ${t.name}? +${g.points_awarded} steps.`) &&
-                              act("complete_game", { p_team_id: t.id, p_game_id: g.id }, `🎉 +${g.points_awarded}!`, () => { burst(t.color_hex, true); play("win"); })}
-                            className={`${btn} bg-green-500 text-black text-xs px-2 py-1`}>✅ Done</button>
                         </div>
                       )}
                     </li>
                   ))}
                 </ul>
 
-                {/* Timers */}
+                {/* Active timers */}
                 {timers.map((timer) => (
                   <div key={timer.id} className="mt-2 rounded-2xl bg-white/5 p-3">
                     <Countdown timer={timer} label={timer.timer_type.replace("_", " ").toUpperCase()} />
@@ -157,15 +178,6 @@ function Admin({ staff }: { staff: Staff }) {
                         : <button onClick={() => act("timer_action", { p_id: timer.id, p_action: "resume" }, "▶ Resumed")} className={`${btn} bg-white/10 text-xs`}>▶</button>}
                       <button onClick={() => act("timer_action", { p_id: timer.id, p_action: "complete" }, "■ Stopped")} className={`${btn} bg-white/10 text-xs`}>■</button>
                       <button onClick={() => act("timer_action", { p_id: timer.id, p_action: "reset" }, "↺ Reset")} className={`${btn} bg-white/10 text-xs`}>↺</button>
-                      {timer.timer_type === "power_eligibility" && (
-                        <button onClick={() => {
-                          const chances = CARD_CHANCES_PER_GAME[timer.game_id ?? ""] ?? 2;
-                          act("timer_action", { p_id: timer.id, p_action: "complete" }, "")
-                            .then(() => act("grant_card_chance", { p_team_id: t.id, p_delta: chances }, `⚡ +${chances} card picks!`, () => { burst("#f5c542"); play("power"); }));
-                        }} className={`${btn} bg-yellow-400 text-black text-xs`}>
-                          ⚡ Beat clock → +{CARD_CHANCES_PER_GAME[timer.game_id ?? ""] ?? 2} picks
-                        </button>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -225,7 +237,7 @@ function Admin({ staff }: { staff: Staff }) {
                   );
                 })()}
 
-                {/* Card chances */}
+                {/* Card chances nudge */}
                 <p className="mt-2 text-xs text-[var(--muted)]">
                   Card picks: <b className="text-[var(--gold)]">{t.card_chances}</b>
                   <button onClick={() => act("grant_card_chance", { p_team_id: t.id, p_delta: 1 }, "+1 pick")} className="ml-2 underline">+1</button>
@@ -251,7 +263,9 @@ function Admin({ staff }: { staff: Staff }) {
             const myCards = d.cards.filter(c => c.assigned_team_id === t.id);
             return (
               <div key={t.id} className="arena team-glow p-3" style={{ ["--c" as string]: t.color_hex }}>
-                <p className="display text-xl mb-2">{t.emoji} {t.name.replace("TEAM ", "")} · {myCards.filter(c => c.status !== "hidden").length}/{MAX_CARD_OPENS} opened · {t.card_chances} picks left</p>
+                <p className="display text-xl mb-2">
+                  {t.emoji} {t.name.replace("TEAM ", "")} · {myCards.filter(c => c.status !== "hidden").length}/{MAX_CARD_OPENS} opened · {t.card_chances} picks left
+                </p>
                 <div className="grid grid-cols-3 gap-1">
                   {myCards.map(c => (
                     <div key={c.id} className={`rounded-lg p-2 text-xs text-center ${c.type === "power" ? "bg-yellow-400/20 border border-yellow-300/50" : c.type === "consequence" ? "bg-purple-500/20 border border-purple-300/50" : "bg-white/5 border border-white/10"}`}>
@@ -280,7 +294,11 @@ function Admin({ staff }: { staff: Staff }) {
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-2xl">{t.emoji}</span>
                   <Ed table="teams" id={t.id} field="name" value={t.name} cls="display text-2xl flex-1" />
-                  {isMaster && <input type="color" aria-label="Team color" defaultValue={t.color_hex} onBlur={(e) => e.target.value !== t.color_hex && update("teams", t.id, { color_hex: e.target.value })} className="h-8 w-10 rounded" />}
+                  {isMaster && (
+                    <input type="color" aria-label="Team color" defaultValue={t.color_hex}
+                      onBlur={(e) => e.target.value !== t.color_hex && update("teams", t.id, { color_hex: e.target.value })}
+                      className="h-8 w-10 rounded" />
+                  )}
                 </div>
                 {isMaster && (
                   <form className="mb-3 flex gap-2" onSubmit={(e) => {
@@ -334,8 +352,9 @@ function Admin({ staff }: { staff: Staff }) {
                 {["upcoming", "live", "final", "complete"].map((s) => <option key={s}>{s}</option>)}
               </select>
             </label>
-            <button onClick={() => confirm("Declare winner and end event?") &&
-              act("finish_event", {}, "🏆 EVENT COMPLETE!", () => { burst(undefined, true); play("win"); })}
+            <button
+              onClick={() => confirm("Declare winner and end event?") &&
+                act("finish_event", {}, "🏆 EVENT COMPLETE!", () => { burst(undefined, true); play("win"); })}
               className={`${btn} mt-4 w-full bg-[var(--gold)] py-3 text-base text-[#1b1200]`}>
               🏆 MARK EVENT COMPLETE
             </button>
@@ -413,4 +432,3 @@ function ResetAll({ onConfirm }: { onConfirm: () => void }) {
     </div>
   );
 }
-
